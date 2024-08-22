@@ -32,8 +32,7 @@ remove:
 # Target to install project dependencies (e.g., OpenZeppelin and Chainlink CCIP)
 install:
 	@echo "Installing dependencies..."
-	forge install OpenZeppelin/openzeppelin-contracts --no-commit 
-	forge install smartcontractkit/ccip@ccip-develop --no-commit   
+	forge install OpenZeppelin/openzeppelin-contracts --no-commit && forge install smartcontractkit/ccip@ccip-develop --no-commit   
 
 # Target to update project dependencies to their latest versions
 update:
@@ -48,7 +47,7 @@ build:
 # Target to run tests on the project using Forge
 test:
 	@echo "Running tests..."
-	forge test 
+	forge test -vvv
 
 # Target to generate a snapshot of the current state (useful for testing)
 snapshot:
