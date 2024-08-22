@@ -6,8 +6,8 @@ This repository contains a test suite designed to estimate gas usage for the `tr
 To get started, clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/yourusername/cross-chain-usdc-gas-estimation.git
-cd cross-chain-usdc-gas-estimation
+git clone https://github.com/juanc004/CCIP-TransferUSDC-Gas-Estimation.git
+cd CCIP-TransferUSDC-Gas-Estimation
 
 ```
 
