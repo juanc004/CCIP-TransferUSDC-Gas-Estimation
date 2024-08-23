@@ -27,7 +27,9 @@ clean:
 # Target to remove Git submodules and libraries
 remove:
 	@echo "Removing submodules and libraries..."
-	rm -rf .gitmodules && rm -rf .git/modules/* && rm -rf lib && touch .gitmodules && git add . && git commit -m "modules"
+	git submodule deinit -f --all && \
+	rm -rf .git/modules/* && \
+	rm -rf lib
 
 # Target to install project dependencies (e.g., OpenZeppelin and Chainlink CCIP)
 install:
@@ -83,9 +85,10 @@ approve:
 	@cast send $(USDC_FUJI_CONTRACT_ADDRESS) "approve(address,uint256)" $(TRANSFER_USDC_ADDRESS) 1000000 --rpc-url $(FUJI_RPC_URL) --private-key $(PRIVATE_KEY) 
 
 # Step #5: Target to transfer USDC to a specified address using the contract on Fuji testnet
-transferUsdc:
+transferUsdcFuji:
 	@echo "Transferring USDC on Fuji testnet..."
 	@cast send $(TRANSFER_USDC_ADDRESS) "transferUsdc(uint64,address,uint256,uint64)" $(DESTINATION_CHAIN_SELECTOR) $(SENDER_PUBLIC_KEY) 1000000 0 --rpc-url $(FUJI_RPC_URL) --private-key $(PRIVATE_KEY)
+
 
 # Step #6: (Optional) Call the TransferUSDC.sol contract address to check Link token balance.
 callFujiBalance:
@@ -115,8 +118,8 @@ allowlistSender:
 
 # Step #6: Repeat command `make approve`
 
-# Step #7: Target to transfer USDC to a specified address using the contract on Fuji testnet
-transferUsdc:
+# Step #7: Target to transfer USDC to a specified address using the contract on Fuji testnet for CCIP
+transferUsdcCCIP:
 	@echo "Transferring USDC on Fuji testnet..."
 	@cast send $(TRANSFER_USDC_ADDRESS) "transferUsdc(uint64,address,uint256,uint64)" $(DESTINATION_CHAIN_SELECTOR) $(CCIP_RECEIVER_ADDRESS) 1000000 500000 --rpc-url $(FUJI_RPC_URL) --private-key $(PRIVATE_KEY)
 
