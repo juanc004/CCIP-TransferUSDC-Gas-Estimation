@@ -6,12 +6,11 @@
 
 
 # Contract and network-specific variables
-TRANSFER_USDC_ADDRESS := 0x7158AE09739b5cC461F24282f6564BAFDA3785f0
+TRANSFER_USDC_ADDRESS := # Add the address of the deployed TransferUSDC contract
 DESTINATION_CHAIN_SELECTOR := 16015286601757825753
 FUJI_LINK_TOKEN_ADDRESS:= 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846
 USDC_FUJI_CONTRACT_ADDRESS := 0x5425890298aed601595a70AB815c96711a31Bc65
-SWAP_TESTNET_USDC := 0x19F07D51e4847e28753cBa4B5AA43AD8f5cE99dc
-CCIP_RECEIVER_ADDRESS := 0x6e024043e124cb03438b07102433d6e66879eb93
+CCIP_RECEIVER_ADDRESS := # Add the address of the deployed CCIPReceiver contract
 SOURCE_CHAIN_SELECTOR := 14767482510784806043
 
 
@@ -66,7 +65,7 @@ format:
 # Step #1: Deploy TransferUSDC contract to Fuji testnet
 deployTransferUSDC:
 	@echo "Deploying contracts to Fuji testnet..."
-	@forge script script/TransferUSDC.s.sol --rpc-url $(FUJI_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(FUJI_API_KEY) -vvvv
+	@forge script script/DeployTransferUSDC.s.sol --rpc-url $(FUJI_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(FUJI_API_KEY) -vvvv
 
 # Step #2: Allowlist destination chain for cross-chain operations
 allowlistDestinationChain:
