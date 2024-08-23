@@ -22,15 +22,15 @@ interface ISwapTestnetUSDC {
 }
 
 /**
- * THIS IS AN EXAMPLE CONTRACT THAT USES HARDCODED VALUES FOR CLARITY.
- * THIS IS AN EXAMPLE CONTRACT THAT USES UN-AUDITED CODE.
- * DO NOT USE THIS CODE IN PRODUCTION.
+ * @title CrossChainReceiver
+ * @dev Example contract to receive and process cross-chain messages, handle token swaps,
+ *      and manage failed message recovery. Not for production use.
  */
 contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
     using EnumerableMap for EnumerableMap.Bytes32ToUintMap;
     using SafeERC20 for IERC20;
 
-    // Example error code, could have many different error codes.
+    // Enum representing various error codes
     enum ErrorCode {
         // RESOLVED is first so that the default value is resolved.
         RESOLVED,
@@ -67,6 +67,12 @@ contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
     event MessageFailed(bytes32 indexed messageId, bytes reason);
     event MessageRecovered(bytes32 indexed messageId);
 
+    /**
+     * @dev Constructor to initialize the contract with required addresses.
+     * @param ccipRouterAddress Address of the CCIP router.
+     * @param cometAddress Address of the Comet contract.
+     * @param swapTestnetUsdcAddress Address of the SwapTestnetUSDC contract.
+     */
     constructor(
         address ccipRouterAddress,
         address cometAddress,
@@ -76,9 +82,11 @@ contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
         i_swapTestnetUsdc = ISwapTestnetUSDC(swapTestnetUsdcAddress);
     }
 
-    /// @dev Modifier that checks if the chain with the given sourceChainSelector is allowlisted and if the sender is allowlisted.
-    /// @param _sourceChainSelector The selector of the destination chain.
-    /// @param _sender The address of the sender.
+    /**
+     * @dev Modifier to ensure the source chain and sender are allowlisted.
+     * @param _sourceChainSelector The chain selector of the source chain.
+     * @param _sender The address of the sender.
+     */
     modifier onlyAllowlisted(uint64 _sourceChainSelector, address _sender) {
         if (!allowlistedSourceChains[_sourceChainSelector])
             revert SourceChainNotAllowed(_sourceChainSelector);
@@ -86,17 +94,21 @@ contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
         _;
     }
 
-    // @dev Modifier to allow only the contract itself to execute a function.
-    /// Throws an exception if called by any account other than the contract itself.
+    /**
+     * @dev Modifier to restrict function access to the contract itself.
+     * @notice Reverts if called by any account other than the contract.
+     */
     modifier onlySelf() {
         if (msg.sender != address(this)) revert OnlySelf();
         _;
     }
 
-    /// @dev Updates the allowlist status of a source chain
-    /// @notice This function can only be called by the owner.
-    /// @param _sourceChainSelector The selector of the source chain to be updated.
-    /// @param _allowed The allowlist status to be set for the source chain.
+    /**
+     * @dev Update the allowlist status of a source chain.
+     * @notice Only callable by the owner.
+     * @param _sourceChainSelector The selector of the source chain.
+     * @param _allowed The allowlist status to set.
+     */
     function allowlistSourceChain(
         uint64 _sourceChainSelector,
         bool _allowed
@@ -104,18 +116,24 @@ contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
         allowlistedSourceChains[_sourceChainSelector] = _allowed;
     }
 
-    /// @dev Updates the allowlist status of a sender for transactions.
-    /// @notice This function can only be called by the owner.
-    /// @param _sender The address of the sender to be updated.
-    /// @param _allowed The allowlist status to be set for the sender.
-    function allowlistSender(address _sender, bool _allowed) external onlyOwner {
+    /**
+     * @dev Update the allowlist status of a sender.
+     * @notice Only callable by the owner.
+     * @param _sender The address of the sender.
+     * @param _allowed The allowlist status to set.
+     */
+    function allowlistSender(
+        address _sender,
+        bool _allowed
+    ) external onlyOwner {
         allowlistedSenders[_sender] = _allowed;
     }
 
-    /// @notice The entrypoint for the CCIP router to call. This function should
-    /// never revert, all errors should be handled internally in this contract.
-    /// @param any2EvmMessage The message to process.
-    /// @dev Extremely important to ensure only router calls this.
+    /**
+     * @notice Entry point for processing cross-chain messages from the CCIP router.
+     * @param any2EvmMessage The cross-chain message received.
+     * @dev Handles errors internally without reverting. Ensures only the router calls this function.
+     */
     function ccipReceive(
         Client.Any2EVMMessage calldata any2EvmMessage
     )
@@ -145,11 +163,11 @@ contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
         }
     }
 
-    /// @notice Serves as the entry point for this contract to process incoming messages.
-    /// @param any2EvmMessage Received CCIP message.
-    /// @dev Transfers specified token amounts to the owner of this contract. This function
-    /// must be external because of the  try/catch for error handling.
-    /// It uses the `onlySelf`: can only be called from the contract.
+    /**
+     * @notice Processes the incoming cross-chain message.
+     * @param any2EvmMessage The cross-chain message received.
+     * @dev Transfers tokens specified in the message. Only callable by the contract itself.
+     */
     function processMessage(
         Client.Any2EVMMessage calldata any2EvmMessage
     )
@@ -166,11 +184,12 @@ contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
         _ccipReceive(any2EvmMessage); // process the message - may revert as well
     }
 
-    /// @notice Allows the owner to retry a failed message in order to unblock the associated tokens.
-    /// @param messageId The unique identifier of the failed message.
-    /// @param tokenReceiver The address to which the tokens will be sent.
-    /// @dev This function is only callable by the contract owner. It changes the status of the message
-    /// from 'failed' to 'resolved' to prevent reentry and multiple retries of the same message.
+    /**
+     * @notice Retries a failed message to recover associated tokens.
+     * @param messageId The ID of the failed message.
+     * @param tokenReceiver The address to receive the recovered tokens.
+     * @dev Marks the message as resolved to prevent multiple retries.
+     */
     function retryFailedMessage(
         bytes32 messageId,
         address tokenReceiver
@@ -196,13 +215,19 @@ contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
         emit MessageRecovered(messageId);
     }
 
-    /// @notice Allows the owner to toggle simulation of reversion for testing purposes.
-    /// @param simRevert If `true`, simulates a revert condition; if `false`, disables the simulation.
-    /// @dev This function is only callable by the contract owner.
+    /**
+     * @notice Toggles the simulation of a revert for testing.
+     * @param simRevert If `true`, enables revert simulation; otherwise disables it.
+     * @dev Only callable by the owner.
+     */
     function setSimRevert(bool simRevert) external onlyOwner {
         s_simRevert = simRevert;
     }
 
+    /**
+     * @dev Internal function to process the received CCIP message.
+     * @param any2EvmMessage The cross-chain message received.
+     */
     function _ccipReceive(
         Client.Any2EVMMessage memory any2EvmMessage
     ) internal override {
@@ -222,9 +247,8 @@ contract CrossChainReceiver is CCIPReceiver, OwnerIsCreator {
     }
 
     /**
-     * @notice Retrieves the IDs of failed messages from the `s_failedMessages` map.
-     * @dev Iterates over the `s_failedMessages` map, collecting all keys.
-     * @return ids An array of bytes32 containing the IDs of failed messages from the `s_failedMessages` map.
+     * @notice Retrieves the IDs of failed messages.
+     * @return ids Array of message IDs.
      */
     function getFailedMessagesIds()
         external

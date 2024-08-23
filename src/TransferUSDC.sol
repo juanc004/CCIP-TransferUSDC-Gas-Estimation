@@ -8,9 +8,9 @@ import {IERC20} from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-sol
 import {SafeERC20} from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * THIS IS AN EXAMPLE CONTRACT THAT USES HARDCODED VALUES FOR CLARITY.
- * THIS IS AN EXAMPLE CONTRACT THAT USES UN-AUDITED CODE.
- * DO NOT USE THIS CODE IN PRODUCTION.
+ * @title TransferUSDC
+ * @dev Example contract for transferring USDC across chains using Chainlink's CCIP.
+ *      Not audited; not for production use.
  */
 contract TransferUSDC is OwnerIsCreator {
     using SafeERC20 for IERC20;
@@ -23,14 +23,17 @@ contract TransferUSDC is OwnerIsCreator {
     IERC20 private immutable i_linkToken;
     IERC20 private immutable i_usdcToken;
 
+    // Mapping to track allowlisted destination chains
     mapping(uint64 => bool) public allowlistedChains;
 
+    // Modifier to check if the destination chain is allowlisted
     modifier onlyAllowlistedChain(uint64 _destinationChainSelector) {
         if (!allowlistedChains[_destinationChainSelector])
             revert DestinationChainNotAllowlisted(_destinationChainSelector);
         _;
     }
 
+    // Event emitted when USDC is transferred
     event UsdcTransferred(
         bytes32 messageId,
         uint64 destinationChainSelector,
@@ -39,12 +42,23 @@ contract TransferUSDC is OwnerIsCreator {
         uint256 ccipFee
     );
 
+    /**
+     * @dev Constructor to initialize the contract with CCIP router, LINK token, and USDC token addresses.
+     * @param ccipRouter Address of the Chainlink CCIP Router.
+     * @param linkToken Address of the LINK token.
+     * @param usdcToken Address of the USDC token.
+     */
     constructor(address ccipRouter, address linkToken, address usdcToken) {
         i_ccipRouter = IRouterClient(ccipRouter);
         i_linkToken = IERC20(linkToken);
         i_usdcToken = IERC20(usdcToken);
     }
 
+    /**
+     * @dev Allowlist or remove a destination chain.
+     * @param _destinationChainSelector Chain ID of the destination.
+     * @param _allowed Boolean indicating whether the chain is allowlisted.
+     */
     function allowlistDestinationChain(
         uint64 _destinationChainSelector,
         bool _allowed
@@ -52,6 +66,15 @@ contract TransferUSDC is OwnerIsCreator {
         allowlistedChains[_destinationChainSelector] = _allowed;
     }
 
+    /**
+     * @dev Transfer USDC across chains using Chainlink's CCIP.
+     * @param _destinationChainSelector Chain ID of the destination.
+     * @param _receiver Address of the receiver on the destination chain.
+     * @param _amount Amount of USDC to transfer.
+     * @param _gasLimit Gas limit for the transaction on the destination chain.
+     * @param _iterations Data passed to the receiver on the destination chain.
+     * @return messageId The ID of the sent CCIP message.
+     */
     function transferUsdc(
         uint64 _destinationChainSelector,
         address _receiver,
@@ -64,6 +87,7 @@ contract TransferUSDC is OwnerIsCreator {
         onlyAllowlistedChain(_destinationChainSelector)
         returns (bytes32 messageId)
     {
+        // Prepare USDC transfer details
         Client.EVMTokenAmount[]
             memory tokenAmounts = new Client.EVMTokenAmount[](1);
         Client.EVMTokenAmount memory tokenAmount = Client.EVMTokenAmount({
@@ -72,6 +96,7 @@ contract TransferUSDC is OwnerIsCreator {
         });
         tokenAmounts[0] = tokenAmount;
 
+        // Create CCIP message
         Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
             receiver: abi.encode(_receiver),
             data: abi.encode(_iterations),
@@ -82,25 +107,28 @@ contract TransferUSDC is OwnerIsCreator {
             feeToken: address(i_linkToken)
         });
 
+        // Calculate CCIP fee
         uint256 ccipFee = i_ccipRouter.getFee(
             _destinationChainSelector,
             message
         );
 
+        // Check for sufficient LINK balance
         if (ccipFee > i_linkToken.balanceOf(address(this)))
             revert NotEnoughBalance(
                 i_linkToken.balanceOf(address(this)),
                 ccipFee
             );
 
+        // Approve and send USDC and LINK for CCIP transfer
         i_linkToken.approve(address(i_ccipRouter), ccipFee);
-
         i_usdcToken.safeTransferFrom(msg.sender, address(this), _amount);
         i_usdcToken.approve(address(i_ccipRouter), _amount);
 
         // Send CCIP Message
         messageId = i_ccipRouter.ccipSend(_destinationChainSelector, message);
 
+        // Emit event after successful transfer
         emit UsdcTransferred(
             messageId,
             _destinationChainSelector,
@@ -110,6 +138,11 @@ contract TransferUSDC is OwnerIsCreator {
         );
     }
 
+    /**
+     * @dev Withdraw any ERC20 token from the contract.
+     * @param _beneficiary Address to receive the withdrawn tokens.
+     * @param _token Address of the token to withdraw.
+     */
     function withdrawToken(
         address _beneficiary,
         address _token

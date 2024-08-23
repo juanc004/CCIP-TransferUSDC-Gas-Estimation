@@ -8,26 +8,41 @@ import {TransferUSDC} from "../src/TransferUSDC.sol";
 import {CrossChainReceiver} from "../src/CrossChainReceiver.sol";
 import {BurnMintERC677} from "@chainlink/contracts-ccip/src/v0.8/shared/token/ERC677/BurnMintERC677.sol";
 
-/// @title A test suite for Sender and Receiver contracts to estimate ccipReceive gas usage.
-contract Test1 is Test {
-    // Declaration of contracts used in the tests
+
+/**
+ * @title GasEstimationTest
+ * @dev This test suite evaluates gas consumption during a cross-chain USDC transfer and applies a buffer to ensure successful execution.
+ */
+contract GasEstimationTest is Test {
+    // Contracts used in the test suite
     TransferUSDC public transferUSDC;
     CrossChainReceiver public crossChainReceiver;
+
+    // Tokens used in the test suite
     BurnMintERC677 public link;
     BurnMintERC677 public usdcToken;
     MockCCIPRouter public router;
+
+    // Addresses used in the test suite
     address public cometAddress;
     address public swapTestnetUsdcAddress;
+
+    // Chain selector used in the test suite
     uint64 public chainSelector = 16015286601757825753;
 
-    /// @dev Sets up the environment by deploying and configuring contracts.
+    /**
+     * @dev Sets up the test environment by deploying and configuring necessary contracts.
+     * This includes deploying the mock router and tokens, as well as setting up the TransferUSDC and CrossChainReceiver contracts.
+     */
     function setUp() public {
+        // Deploy the mock router and tokens
         router = new MockCCIPRouter();
         link = new BurnMintERC677("ChainLink Token", "LINK", 18, 10 ** 27);
         usdcToken = new BurnMintERC677("USDC Token", "USDC", 6, 10 ** 12);
 
         usdcToken.grantMintRole(address(this));
 
+        // Deploy the CrossChainReceiver and TransferUSDC contracts
         crossChainReceiver = new CrossChainReceiver(
             address(router),
             cometAddress,
@@ -40,25 +55,35 @@ contract Test1 is Test {
             address(usdcToken)
         );
 
+        // Mint USDC tokens to this contract and approve them for the transferUSDC contract
         usdcToken.mint(address(this), 10000000);
         usdcToken.approve(address(transferUSDC), 10000000);
 
+        // Allowlist the destination chain and sender contracts
         transferUSDC.allowlistDestinationChain(chainSelector, true);
         crossChainReceiver.allowlistSourceChain(chainSelector, true);
         crossChainReceiver.allowlistSender(address(transferUSDC), true);
     }
 
-    /// @dev Sends a message and records gas usage from logs.
+    /**
+     * @dev Sends a cross-chain message and records the gas usage from the logs.
+     * @param iterations The number of iterations to perform in the test message.
+     * @param gasLimit The gas limit to use for the message.
+     * @return The amount of gas used in the transaction.
+     */
     function sendMessage(uint256 iterations, uint64 gasLimit) private returns (uint256) {
         vm.recordLogs();  // Start recording logs to capture gas usage
+
+        // Execute the USDC transfer across chains
         transferUSDC.transferUsdc(
             chainSelector,
             address(crossChainReceiver),
-            1e6,
+            1e6,    // Transfer 1 USDC token
             gasLimit,
             iterations
         );
 
+        // Retrieve the recorded logs and gas used
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bytes32 msgExecutedSignature = keccak256("MsgExecuted(bool,bytes,uint256)");
 
@@ -72,7 +97,11 @@ contract Test1 is Test {
         return gasUsed;
     }
 
-    /// @dev Measures gas used, applies a 10% buffer, and runs the function with the new limit.
+    /**
+     * @dev Measures gas usage, calculates a 10% buffer, and re-runs the function with the new gas limit.
+     * This test first measures the gas used by the USDC transfer, then adds a 10% buffer to the gas limit,
+     * and finally re-runs the transfer with the adjusted gas limit to ensure it completes successfully.
+     */
     function test_CalculateAndApplyGasLimit() public {
         console.log("\n----- Start Gas Estimation -----\n");
 
