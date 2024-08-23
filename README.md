@@ -1,4 +1,5 @@
 # Day #3 Homework: Cross-Chain USDC Transfer and Gas Estimation Test
+
 This repository contains a test suite designed to estimate gas usage for the `transferUsdc` function within the `TransferUSDC` contract. The goal is to measure the gas used during a cross-chain transfer, apply a 10% buffer to the gas limit, and verify that the transaction executes successfully with the adjusted gas limit.
 
 ## Cloning the Repository
@@ -15,7 +16,17 @@ cd CCIP-TransferUSDC-Gas-Estimation
 
 This test suite is built using Foundry, a smart contract testing framework. Ensure you have Foundry installed on your machine. If not, you can install it by following the instructions on the [Foundry GitHub page](https://github.com/foundry-rs/foundry).
 
-To run the test, use the following command:
+### Install Dependencies
+Before running the tests, you'll need to install the project dependencies. You can do this with the following command:
+
+```bash
+make install
+
+```
+This command will install all necessary dependencies, such as OpenZeppelin contracts and Chainlink CCIP, using Foundry.
+
+### Run the Test
+After installing the dependencies, run the tests using:
 
 ```bash
 make test
@@ -28,19 +39,16 @@ The test suite focuses on measuring the gas consumption of the `transferUsdc` fu
 
 ### Steps in the Test
 
-1. **Measure the Gas Consumption**:
-    - The test measures the gas used by the `transferUsdc` function when sending USDC across chains.
-2. **Calculate and Apply a 10% Buffer**:
-    - A 10% buffer is added to the measured gas to calculate a new gas limit, ensuring the transaction has enough gas to succeed even if gas usage fluctuates.
-3. **Validate with Adjusted Gas Limit**:
-    - The function is re-executed with the adjusted gas limit to confirm that the buffer is sufficient and the transaction completes successfully.
+1. **Measure the Gas Consumption**: The test measures the gas used by the `transferUsdc` function when sending USDC across chains.
+2. **Calculate and Apply a 10% Buffer**: A 10% buffer is added to the measured gas to calculate a new gas limit, ensuring the transaction has enough gas to succeed even if gas usage fluctuates.
+3. **Validate with Adjusted Gas Limit**: The function is re-executed with the adjusted gas limit to confirm that the buffer is sufficient and the transaction completes successfully.
 
 ### Example Terminal Output
 
 When you run the test, you should see output similar to this:
 
 ```
-❯ forge test 
+❯ forge test
 [⠊] Compiling...
 [⠢] Compiling 1 files with Solc 0.8.20
 [⠆] Solc 0.8.20 finished in 3.22s
@@ -65,10 +73,10 @@ Logs:
 
 ### Explanation of Solution and Output
 
-| Step | Description | Output Example |
-| --- | --- | --- |
-| **Measured Gas Used** | The gas used during the execution of the `transferUsdc` function is measured. | `Measured gas used: 307950` |
-| **Calculated Gas Limit with Buffer** | A 10% buffer is added to the measured gas to calculate a new gas limit. | `Calculated gas limit with 10% buffer: 338745` |
+| Step                                   | Description                                                                   | Output Example                                   |
+| -------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
+| **Measured Gas Used**                  | The gas used during the execution of the `transferUsdc` function is measured. | `Measured gas used: 307950`                      |
+| **Calculated Gas Limit with Buffer**   | A 10% buffer is added to the measured gas to calculate a new gas limit.       | `Calculated gas limit with 10% buffer: 338745`   |
 | **Final Gas Used with Adjusted Limit** | The transaction is re-run using the adjusted gas limit to verify correctness. | `Final gas used with adjusted gas limit: 282050` |
 
 ### Explanation
